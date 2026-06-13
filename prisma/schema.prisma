@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum VerificationStatus {
+  verified
+  pending_review
+  source_required
+}
+
+model Generic {
+  id          String   @id @default(cuid())
+  genericName String   @unique @map("generic_name")
+  slug        String   @unique
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  brands      Brand[]
+
+  @@map("generics")
+}
+
+model Manufacturer {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  website   String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  brands    Brand[]
+
+  @@map("manufacturers")
+}
+
+model Country {
+  id        String   @id @default(cuid())
+  name      String
+  isoCode   String   @unique @map("iso_code")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  brands    Brand[]
+
+  @@map("countries")
+}
+
+model DrugSource {
+  id        String   @id @default(cuid())
+  name      String
+  url       String?
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  brands    Brand[]
+
+  @@unique([name, url])
+  @@map("drug_sources")
+}
+
+model Brand {
+  id                 String             @id @default(cuid())
+  brandName          String             @map("brand_name")
+  activeIngredient   String             @map("active_ingredient")
+  strength           String
+  dosageForm         String             @map("dosage_form")
+  registrationNumber String?            @map("registration_number")
+  verificationStatus VerificationStatus @default(pending_review) @map("verification_status")
+  lastVerifiedAt     DateTime           @map("last_verified_at")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  genericId      String @map("generic_id")
+  manufacturerId String @map("manufacturer_id")
+  countryId      String @map("country_id")
+  sourceId       String @map("source_id")
+
+  generic      Generic      @relation(fields: [genericId], references: [id], onDelete: Cascade)
+  manufacturer Manufacturer @relation(fields: [manufacturerId], references: [id])
+  country      Country      @relation(fields: [countryId], references: [id])
+  source       DrugSource   @relation(fields: [sourceId], references: [id])
+
+  @@index([brandName])
+  @@index([activeIngredient])
+  @@index([dosageForm])
+  @@index([strength])
+  @@index([verificationStatus])
+  @@unique([brandName, activeIngredient, strength, dosageForm, manufacturerId, countryId])
+  @@map("brands")
+}
